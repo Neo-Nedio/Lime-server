@@ -21,9 +21,9 @@ ConfigCenter:
 #   MaxIdleConns: 5
 #
 # Redis:
-#   Address: 127.0.0.1:6379
-#   Password: REPLACE_REDIS_PASSWORD
-#   DB: 0
+#   Host: 127.0.0.1:6379
+#   Type: node
+#   Pass: REPLACE_REDIS_PASSWORD
 #
 # Mailer:
 #   Host: smtp.example.invalid
@@ -35,5 +35,5 @@ ConfigCenter:
 # JWT:
 #   AccessSecret: REPLACE_JWT_ACCESS_SECRET
 #   RefreshSecret: REPLACE_JWT_REFRESH_SECRET
-#   AccessTTL: 15m
-#   RefreshTTL: 720h
+#   AccessExpire: 900
+#   RefreshExpire: 2592000
