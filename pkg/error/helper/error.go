@@ -5,6 +5,9 @@ import (
 	"fmt"
 
 	"github.com/Neo-Nedio/Lime-server/pkg/error/code"
+	"github.com/zeromicro/go-zero/core/logx"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // Error 是 API 返回的通用错误对象。
@@ -58,4 +61,12 @@ func NewNotFound(message string) *Error {
 // NewInternalServerError 创建 500 操作失败错误。
 func NewInternalServerError(message string) *Error {
 	return New(code.InternalServerError, message)
+}
+
+// InternalError 记录内部错误，并向调用方返回统一的系统错误。
+func InternalError(logger logx.Logger, message string, cause error) error {
+	if logger != nil && cause != nil {
+		logger.Errorf("%s：%v", message, cause)
+	}
+	return status.Error(codes.Internal, "系统繁忙，请稍后再试")
 }

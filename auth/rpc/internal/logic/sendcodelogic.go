@@ -17,6 +17,7 @@ import (
 	"github.com/Neo-Nedio/Lime-server/auth/rpc/internal/svc"
 	"github.com/Neo-Nedio/Lime-server/auth/rpc/pb"
 	"github.com/Neo-Nedio/Lime-server/pkg/contans"
+	errorHelper "github.com/Neo-Nedio/Lime-server/pkg/error/helper"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -48,13 +49,13 @@ func (l *SendCodeLogic) SendCode(in *pb.SendCodeRequest) (*pb.EmptyResponse, err
 		return nil, status.Error(codes.InvalidArgument, "邮箱格式无效")
 	}
 	if l.svcCtx == nil || l.svcCtx.Redis == nil {
-		return nil, sendCodeInternalError(l.Logger, "认证依赖未配置", nil)
+		return nil, errorHelper.InternalError(l.Logger, "认证依赖未配置", nil)
 	}
 
 	cooldownKey := contans.EmailCodeCooldownKey(email)
 	exists, err := l.svcCtx.Redis.ExistsCtx(l.ctx, cooldownKey)
 	if err != nil {
-		return nil, sendCodeInternalError(l.Logger, "检查验证码发送频率失败", err)
+		return nil, errorHelper.InternalError(l.Logger, "检查验证码发送频率失败", err)
 	}
 	if exists {
 		return nil, status.Error(codes.ResourceExhausted, "验证码发送过于频繁，请稍后再试")
@@ -62,16 +63,16 @@ func (l *SendCodeLogic) SendCode(in *pb.SendCodeRequest) (*pb.EmptyResponse, err
 
 	code, err := generateSendCode()
 	if err != nil {
-		return nil, sendCodeInternalError(l.Logger, "生成验证码失败", err)
+		return nil, errorHelper.InternalError(l.Logger, "生成验证码失败", err)
 	}
 	if err := l.svcCtx.Redis.SetexCtx(l.ctx, contans.EmailCodeKey(email), code, int(contans.VerificationCodeTTL/time.Second)); err != nil {
-		return nil, sendCodeInternalError(l.Logger, "保存验证码失败", err)
+		return nil, errorHelper.InternalError(l.Logger, "保存验证码失败", err)
 	}
 	if err := l.svcCtx.Redis.SetexCtx(l.ctx, cooldownKey, "1", int(contans.VerificationCooldownTTL/time.Second)); err != nil {
-		return nil, sendCodeInternalError(l.Logger, "保存验证码冷却状态失败", err)
+		return nil, errorHelper.InternalError(l.Logger, "保存验证码冷却状态失败", err)
 	}
 	if err := sendSendCodeEmail(l.ctx, l.svcCtx.Config, email, code); err != nil {
-		return nil, sendCodeInternalError(l.Logger, "发送验证码邮件失败", err)
+		return nil, errorHelper.InternalError(l.Logger, "发送验证码邮件失败", err)
 	}
 
 	return &pb.EmptyResponse{Success: true}, nil
@@ -127,11 +128,4 @@ func sendSendCodeEmail(ctx context.Context, c config.Config, email, code string)
 	}
 
 	return nil
-}
-
-func sendCodeInternalError(logger logx.Logger, message string, cause error) error {
-	if logger != nil && cause != nil {
-		logger.Errorf("%s：%v", message, cause)
-	}
-	return status.Error(codes.Internal, "系统繁忙，请稍后再试")
 }

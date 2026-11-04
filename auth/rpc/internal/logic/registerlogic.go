@@ -15,6 +15,7 @@ import (
 	"github.com/Neo-Nedio/Lime-server/auth/rpc/internal/svc"
 	"github.com/Neo-Nedio/Lime-server/auth/rpc/pb"
 	"github.com/Neo-Nedio/Lime-server/pkg/contans"
+	errorHelper "github.com/Neo-Nedio/Lime-server/pkg/error/helper"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -63,18 +64,18 @@ func (l *RegisterLogic) Register(in *pb.RegisterRequest) (*pb.EmptyResponse, err
 		return nil, status.Error(codes.InvalidArgument, registerValidationMessage(err))
 	}
 	if l.svcCtx == nil || l.svcCtx.Redis == nil || l.svcCtx.UserModel == nil {
-		return nil, registerInternalError(l.Logger, "认证依赖未配置", nil)
+		return nil, errorHelper.InternalError(l.Logger, "认证依赖未配置", nil)
 	}
 
 	storedCode, err := l.svcCtx.Redis.GetCtx(l.ctx, contans.EmailCodeKey(email))
 	if err != nil {
-		return nil, registerInternalError(l.Logger, "读取验证码失败", err)
+		return nil, errorHelper.InternalError(l.Logger, "读取验证码失败", err)
 	}
 	if storedCode == "" || subtle.ConstantTimeCompare([]byte(storedCode), []byte(code)) != 1 {
 		return nil, status.Error(codes.InvalidArgument, "验证码错误或已过期")
 	}
 	if _, err := l.svcCtx.Redis.DelCtx(l.ctx, contans.EmailCodeKey(email)); err != nil {
-		return nil, registerInternalError(l.Logger, "消费验证码失败", err)
+		return nil, errorHelper.InternalError(l.Logger, "消费验证码失败", err)
 	}
 
 	existing, err := l.svcCtx.UserModel.FindOneByEmail(l.ctx, email)
@@ -82,16 +83,16 @@ func (l *RegisterLogic) Register(in *pb.RegisterRequest) (*pb.EmptyResponse, err
 	case err == nil && existing != nil:
 		return nil, status.Error(codes.AlreadyExists, "邮箱已注册")
 	case err != nil && !registerNotFound(err):
-		return nil, registerInternalError(l.Logger, "查询邮箱唯一性失败", err)
+		return nil, errorHelper.InternalError(l.Logger, "查询邮箱唯一性失败", err)
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(in.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, registerInternalError(l.Logger, "加密密码失败", err)
+		return nil, errorHelper.InternalError(l.Logger, "加密密码失败", err)
 	}
 	nickname, handle, uid, err := generateRegisterProfile()
 	if err != nil {
-		return nil, registerInternalError(l.Logger, "生成用户身份信息失败", err)
+		return nil, errorHelper.InternalError(l.Logger, "生成用户身份信息失败", err)
 	}
 
 	user := &models.User{
@@ -109,7 +110,7 @@ func (l *RegisterLogic) Register(in *pb.RegisterRequest) (*pb.EmptyResponse, err
 		if registerDuplicate(err) {
 			return nil, status.Error(codes.AlreadyExists, "用户信息已存在")
 		}
-		return nil, registerInternalError(l.Logger, "创建用户失败", err)
+		return nil, errorHelper.InternalError(l.Logger, "创建用户失败", err)
 	}
 
 	return &pb.EmptyResponse{Success: true}, nil
@@ -200,11 +201,4 @@ func registerNotFound(err error) bool {
 func registerDuplicate(err error) bool {
 	message := strings.ToLower(err.Error())
 	return strings.Contains(message, "duplicate") || strings.Contains(message, "unique constraint") || strings.Contains(message, "唯一")
-}
-
-func registerInternalError(logger logx.Logger, message string, cause error) error {
-	if logger != nil && cause != nil {
-		logger.Errorf("%s：%v", message, cause)
-	}
-	return status.Error(codes.Internal, "系统繁忙，请稍后再试")
 }

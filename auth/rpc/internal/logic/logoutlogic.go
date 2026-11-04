@@ -8,6 +8,7 @@ import (
 	"github.com/Neo-Nedio/Lime-server/auth/rpc/internal/svc"
 	"github.com/Neo-Nedio/Lime-server/auth/rpc/pb"
 	"github.com/Neo-Nedio/Lime-server/pkg/contans"
+	errorHelper "github.com/Neo-Nedio/Lime-server/pkg/error/helper"
 	jwtutil "github.com/Neo-Nedio/Lime-server/pkg/jwt"
 
 	"github.com/go-playground/validator/v10"
@@ -45,7 +46,7 @@ func (l *LogoutLogic) Logout(in *pb.LogoutRequest) (*pb.EmptyResponse, error) {
 		return nil, status.Error(codes.InvalidArgument, "访问令牌不能为空")
 	}
 	if l.svcCtx == nil || l.svcCtx.Redis == nil {
-		return nil, logoutInternalError(l.Logger, "认证依赖未配置", nil)
+		return nil, errorHelper.InternalError(l.Logger, "认证依赖未配置", nil)
 	}
 
 	tokenManager, err := jwtutil.NewTokenManager(
@@ -55,7 +56,7 @@ func (l *LogoutLogic) Logout(in *pb.LogoutRequest) (*pb.EmptyResponse, error) {
 		l.svcCtx.Config.JWT.RefreshExpire,
 	)
 	if err != nil {
-		return nil, logoutInternalError(l.Logger, "初始化令牌工具失败", err)
+		return nil, errorHelper.InternalError(l.Logger, "初始化令牌工具失败", err)
 	}
 
 	claims, err := tokenManager.ParseAccessToken(accessToken)
@@ -63,7 +64,7 @@ func (l *LogoutLogic) Logout(in *pb.LogoutRequest) (*pb.EmptyResponse, error) {
 		return nil, status.Error(codes.Unauthenticated, "访问令牌无效或已过期")
 	}
 	if _, err := l.svcCtx.Redis.DelCtx(l.ctx, contans.RefreshTokenKey(claims.UserID)); err != nil {
-		return nil, logoutInternalError(l.Logger, "删除刷新令牌失败", err)
+		return nil, errorHelper.InternalError(l.Logger, "删除刷新令牌失败", err)
 	}
 
 	remaining := logoutRemainingSeconds(claims.ExpiresAt.Time, time.Now())
@@ -71,7 +72,7 @@ func (l *LogoutLogic) Logout(in *pb.LogoutRequest) (*pb.EmptyResponse, error) {
 		return &pb.EmptyResponse{Success: true}, nil
 	}
 	if err := l.svcCtx.Redis.SetexCtx(l.ctx, contans.BlacklistTokenKey(accessToken), "1", remaining); err != nil {
-		return nil, logoutInternalError(l.Logger, "写入访问令牌黑名单失败", err)
+		return nil, errorHelper.InternalError(l.Logger, "写入访问令牌黑名单失败", err)
 	}
 
 	return &pb.EmptyResponse{Success: true}, nil
@@ -88,11 +89,4 @@ func logoutRemainingSeconds(expiresAt, now time.Time) int {
 		seconds++
 	}
 	return seconds
-}
-
-func logoutInternalError(logger logx.Logger, message string, cause error) error {
-	if logger != nil && cause != nil {
-		logger.Errorf("%s：%v", message, cause)
-	}
-	return status.Error(codes.Internal, "系统繁忙，请稍后再试")
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/Neo-Nedio/Lime-server/auth/rpc/internal/svc"
 	"github.com/Neo-Nedio/Lime-server/auth/rpc/pb"
 	"github.com/Neo-Nedio/Lime-server/pkg/contans"
+	errorHelper "github.com/Neo-Nedio/Lime-server/pkg/error/helper"
 	jwtutil "github.com/Neo-Nedio/Lime-server/pkg/jwt"
 
 	"github.com/go-playground/validator/v10"
@@ -58,7 +59,7 @@ func (l *LoginLogic) Login(in *pb.LoginRequest) (*pb.LoginResponse, error) {
 		return nil, status.Error(codes.InvalidArgument, loginValidationMessage(err))
 	}
 	if l.svcCtx == nil || l.svcCtx.Redis == nil || l.svcCtx.UserModel == nil {
-		return nil, loginInternalError(l.Logger, "认证依赖未配置", nil)
+		return nil, errorHelper.InternalError(l.Logger, "认证依赖未配置", nil)
 	}
 
 	user, err := l.svcCtx.UserModel.FindOneByEmail(l.ctx, email)
@@ -66,7 +67,7 @@ func (l *LoginLogic) Login(in *pb.LoginRequest) (*pb.LoginResponse, error) {
 	case errors.Is(err, models.ErrNotFound):
 		return nil, status.Error(codes.Unauthenticated, "邮箱、密码或验证码错误")
 	case err != nil:
-		return nil, loginInternalError(l.Logger, "查询用户失败", err)
+		return nil, errorHelper.InternalError(l.Logger, "查询用户失败", err)
 	case user == nil:
 		return nil, status.Error(codes.Unauthenticated, "邮箱、密码或验证码错误")
 	case user.Deleted != contans.UserNotDeleted || user.Status == contans.UserStatusDisabled:
@@ -88,7 +89,7 @@ func (l *LoginLogic) Login(in *pb.LoginRequest) (*pb.LoginResponse, error) {
 		strconv.FormatInt(credentialVersion, 10),
 		int(l.svcCtx.Config.JWT.RefreshExpire),
 	); err != nil {
-		return nil, loginInternalError(l.Logger, "保存密码版本失败", err)
+		return nil, errorHelper.InternalError(l.Logger, "保存密码版本失败", err)
 	}
 
 	tokenManager, err := jwtutil.NewTokenManager(
@@ -98,11 +99,11 @@ func (l *LoginLogic) Login(in *pb.LoginRequest) (*pb.LoginResponse, error) {
 		l.svcCtx.Config.JWT.RefreshExpire,
 	)
 	if err != nil {
-		return nil, loginInternalError(l.Logger, "初始化令牌工具失败", err)
+		return nil, errorHelper.InternalError(l.Logger, "初始化令牌工具失败", err)
 	}
 	pair, err := tokenManager.IssueTokenPair(loginClaims(user, credentialVersion))
 	if err != nil {
-		return nil, loginInternalError(l.Logger, "签发登录令牌失败", err)
+		return nil, errorHelper.InternalError(l.Logger, "签发登录令牌失败", err)
 	}
 	if err := l.svcCtx.Redis.SetexCtx(
 		l.ctx,
@@ -110,7 +111,7 @@ func (l *LoginLogic) Login(in *pb.LoginRequest) (*pb.LoginResponse, error) {
 		pair.RefreshToken,
 		int(l.svcCtx.Config.JWT.RefreshExpire),
 	); err != nil {
-		return nil, loginInternalError(l.Logger, "保存刷新令牌失败", err)
+		return nil, errorHelper.InternalError(l.Logger, "保存刷新令牌失败", err)
 	}
 
 	return &pb.LoginResponse{
@@ -123,13 +124,13 @@ func (l *LoginLogic) Login(in *pb.LoginRequest) (*pb.LoginResponse, error) {
 func (l *LoginLogic) verifyLoginCode(email, code string) error {
 	storedCode, err := l.svcCtx.Redis.GetCtx(l.ctx, contans.EmailCodeKey(email))
 	if err != nil {
-		return loginInternalError(l.Logger, "读取验证码失败", err)
+		return errorHelper.InternalError(l.Logger, "读取验证码失败", err)
 	}
 	if storedCode == "" || subtle.ConstantTimeCompare([]byte(storedCode), []byte(code)) != 1 {
 		return status.Error(codes.Unauthenticated, "邮箱、密码或验证码错误")
 	}
 	if _, err := l.svcCtx.Redis.DelCtx(l.ctx, contans.EmailCodeKey(email)); err != nil {
-		return loginInternalError(l.Logger, "消费验证码失败", err)
+		return errorHelper.InternalError(l.Logger, "消费验证码失败", err)
 	}
 	return nil
 }
@@ -160,11 +161,4 @@ func loginValidationMessage(err error) string {
 	default:
 		return "登录参数无效"
 	}
-}
-
-func loginInternalError(logger logx.Logger, message string, cause error) error {
-	if logger != nil && cause != nil {
-		logger.Errorf("%s：%v", message, cause)
-	}
-	return status.Error(codes.Internal, "系统繁忙，请稍后再试")
 }

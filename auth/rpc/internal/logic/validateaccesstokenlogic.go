@@ -8,6 +8,7 @@ import (
 	"github.com/Neo-Nedio/Lime-server/auth/rpc/internal/svc"
 	"github.com/Neo-Nedio/Lime-server/auth/rpc/pb"
 	"github.com/Neo-Nedio/Lime-server/pkg/contans"
+	errorHelper "github.com/Neo-Nedio/Lime-server/pkg/error/helper"
 	jwtutil "github.com/Neo-Nedio/Lime-server/pkg/jwt"
 
 	"github.com/go-playground/validator/v10"
@@ -45,7 +46,7 @@ func (l *ValidateAccessTokenLogic) ValidateAccessToken(in *pb.ValidateAccessToke
 		return nil, status.Error(codes.InvalidArgument, "访问令牌不能为空")
 	}
 	if l.svcCtx == nil || l.svcCtx.Redis == nil {
-		return nil, validateAccessInternalError(l.Logger, "认证依赖未配置", nil)
+		return nil, errorHelper.InternalError(l.Logger, "认证依赖未配置", nil)
 	}
 
 	tokenManager, err := jwtutil.NewTokenManager(
@@ -55,7 +56,7 @@ func (l *ValidateAccessTokenLogic) ValidateAccessToken(in *pb.ValidateAccessToke
 		l.svcCtx.Config.JWT.RefreshExpire,
 	)
 	if err != nil {
-		return nil, validateAccessInternalError(l.Logger, "初始化令牌工具失败", err)
+		return nil, errorHelper.InternalError(l.Logger, "初始化令牌工具失败", err)
 	}
 
 	claims, err := tokenManager.ParseAccessToken(accessToken)
@@ -65,7 +66,7 @@ func (l *ValidateAccessTokenLogic) ValidateAccessToken(in *pb.ValidateAccessToke
 
 	blacklisted, err := l.svcCtx.Redis.ExistsCtx(l.ctx, contans.BlacklistTokenKey(accessToken))
 	if err != nil {
-		return nil, validateAccessInternalError(l.Logger, "检查访问令牌黑名单失败", err)
+		return nil, errorHelper.InternalError(l.Logger, "检查访问令牌黑名单失败", err)
 	}
 	if blacklisted {
 		return nil, status.Error(codes.Unauthenticated, "访问令牌已失效")
@@ -73,14 +74,14 @@ func (l *ValidateAccessTokenLogic) ValidateAccessToken(in *pb.ValidateAccessToke
 
 	issueValue, err := l.svcCtx.Redis.GetCtx(l.ctx, contans.AuthIssueKey(claims.UserID))
 	if err != nil {
-		return nil, validateAccessInternalError(l.Logger, "读取密码版本失败", err)
+		return nil, errorHelper.InternalError(l.Logger, "读取密码版本失败", err)
 	}
 	if issueValue == "" {
 		return nil, status.Error(codes.Unauthenticated, "登录状态已失效")
 	}
 	issueVersion, err := strconv.ParseInt(strings.TrimSpace(issueValue), 10, 64)
 	if err != nil || issueVersion < 0 {
-		return nil, validateAccessInternalError(l.Logger, "读取到无效的密码版本", err)
+		return nil, errorHelper.InternalError(l.Logger, "读取到无效的密码版本", err)
 	}
 	if claims.CredentialVersion < issueVersion {
 		return nil, status.Error(codes.Unauthenticated, "访问令牌已失效")
@@ -92,11 +93,4 @@ func (l *ValidateAccessTokenLogic) ValidateAccessToken(in *pb.ValidateAccessToke
 		CredentialVersion: claims.CredentialVersion,
 		Subject:           claims.Subject,
 	}, nil
-}
-
-func validateAccessInternalError(logger logx.Logger, message string, cause error) error {
-	if logger != nil && cause != nil {
-		logger.Errorf("%s：%v", message, cause)
-	}
-	return status.Error(codes.Internal, "系统繁忙，请稍后再试")
 }
