@@ -53,4 +53,3 @@ service auth-api {
 	@handler Logout
 	post /logout returns (EmptyDataResp)
 }
-

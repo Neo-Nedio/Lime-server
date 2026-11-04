@@ -1,2 +1,5 @@
 .idea/
 .agent-workflow/
+
+# Go 测试文件
+*_test.go
