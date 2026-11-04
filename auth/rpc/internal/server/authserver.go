@@ -9,7 +9,7 @@ import (
 
 	"github.com/Neo-Nedio/Lime-server/auth/rpc/internal/logic"
 	"github.com/Neo-Nedio/Lime-server/auth/rpc/internal/svc"
-	"github.com/Neo-Nedio/Lime-server/auth/rpc/pb"
+	"github.com/Neo-Nedio/Lime-server/auth/rpc/pb/auth/rpc"
 )
 
 type AuthServer struct {
@@ -38,7 +38,7 @@ func (s *AuthServer) Login(ctx context.Context, in *pb.LoginRequest) (*pb.LoginR
 	return l.Login(in)
 }
 
-func (s *AuthServer) Logout(ctx context.Context, in *pb.EmptyRequest) (*pb.EmptyResponse, error) {
+func (s *AuthServer) Logout(ctx context.Context, in *pb.LogoutRequest) (*pb.EmptyResponse, error) {
 	l := logic.NewLogoutLogic(ctx, s.svcCtx)
 	return l.Logout(in)
 }

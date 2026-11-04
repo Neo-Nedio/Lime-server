@@ -37,6 +37,10 @@ message RefreshRequest {
   string refresh_token = 1;
 }
 
+message LogoutRequest {
+  string access_token = 1;
+}
+
 message ValidateAccessTokenRequest {
   string access_token = 1;
 }
@@ -52,7 +56,7 @@ service Auth {
   rpc SendCode(SendCodeRequest) returns (EmptyResponse);
   rpc Register(RegisterRequest) returns (EmptyResponse);
   rpc Login(LoginRequest) returns (LoginResponse);
-  rpc Logout(EmptyRequest) returns (EmptyResponse);
+  rpc Logout(LogoutRequest) returns (EmptyResponse);
   rpc Refresh(RefreshRequest) returns (LoginResponse);
   rpc ValidateAccessToken(ValidateAccessTokenRequest) returns (ValidateAccessTokenResponse);
 }

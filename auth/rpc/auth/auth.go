@@ -18,6 +18,7 @@ type (
 	EmptyResponse               = pb.EmptyResponse
 	LoginRequest                = pb.LoginRequest
 	LoginResponse               = pb.LoginResponse
+	LogoutRequest               = pb.LogoutRequest
 	RefreshRequest              = pb.RefreshRequest
 	RegisterRequest             = pb.RegisterRequest
 	SendCodeRequest             = pb.SendCodeRequest
@@ -28,7 +29,7 @@ type (
 		SendCode(ctx context.Context, in *SendCodeRequest, opts ...grpc.CallOption) (*EmptyResponse, error)
 		Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*EmptyResponse, error)
 		Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
-		Logout(ctx context.Context, in *EmptyRequest, opts ...grpc.CallOption) (*EmptyResponse, error)
+		Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*EmptyResponse, error)
 		Refresh(ctx context.Context, in *RefreshRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 		ValidateAccessToken(ctx context.Context, in *ValidateAccessTokenRequest, opts ...grpc.CallOption) (*ValidateAccessTokenResponse, error)
 	}
@@ -59,7 +60,7 @@ func (m *defaultAuth) Login(ctx context.Context, in *LoginRequest, opts ...grpc.
 	return client.Login(ctx, in, opts...)
 }
 
-func (m *defaultAuth) Logout(ctx context.Context, in *EmptyRequest, opts ...grpc.CallOption) (*EmptyResponse, error) {
+func (m *defaultAuth) Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*EmptyResponse, error) {
 	client := pb.NewAuthClient(m.cli.Conn())
 	return client.Logout(ctx, in, opts...)
 }

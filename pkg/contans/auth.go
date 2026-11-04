@@ -21,6 +21,7 @@ const (
 	VerificationCooldownTTL = 60 * time.Second
 
 	// 注册和登录参数约束。
+	EmailMaxLength    = 100
 	PasswordMinLength = 6
 	PasswordMaxLength = 32
 	PhoneLength       = 11

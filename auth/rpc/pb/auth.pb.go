@@ -377,6 +377,50 @@ func (x *RefreshRequest) GetRefreshToken() string {
 	return ""
 }
 
+type LogoutRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AccessToken   string                 `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LogoutRequest) Reset() {
+	*x = LogoutRequest{}
+	mi := &file_auth_rpc_auth_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LogoutRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LogoutRequest) ProtoMessage() {}
+
+func (x *LogoutRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_rpc_auth_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LogoutRequest.ProtoReflect.Descriptor instead.
+func (*LogoutRequest) Descriptor() ([]byte, []int) {
+	return file_auth_rpc_auth_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *LogoutRequest) GetAccessToken() string {
+	if x != nil {
+		return x.AccessToken
+	}
+	return ""
+}
+
 type ValidateAccessTokenRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AccessToken   string                 `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
@@ -386,7 +430,7 @@ type ValidateAccessTokenRequest struct {
 
 func (x *ValidateAccessTokenRequest) Reset() {
 	*x = ValidateAccessTokenRequest{}
-	mi := &file_auth_rpc_auth_proto_msgTypes[7]
+	mi := &file_auth_rpc_auth_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -398,7 +442,7 @@ func (x *ValidateAccessTokenRequest) String() string {
 func (*ValidateAccessTokenRequest) ProtoMessage() {}
 
 func (x *ValidateAccessTokenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_rpc_auth_proto_msgTypes[7]
+	mi := &file_auth_rpc_auth_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -411,7 +455,7 @@ func (x *ValidateAccessTokenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateAccessTokenRequest.ProtoReflect.Descriptor instead.
 func (*ValidateAccessTokenRequest) Descriptor() ([]byte, []int) {
-	return file_auth_rpc_auth_proto_rawDescGZIP(), []int{7}
+	return file_auth_rpc_auth_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ValidateAccessTokenRequest) GetAccessToken() string {
@@ -433,7 +477,7 @@ type ValidateAccessTokenResponse struct {
 
 func (x *ValidateAccessTokenResponse) Reset() {
 	*x = ValidateAccessTokenResponse{}
-	mi := &file_auth_rpc_auth_proto_msgTypes[8]
+	mi := &file_auth_rpc_auth_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -445,7 +489,7 @@ func (x *ValidateAccessTokenResponse) String() string {
 func (*ValidateAccessTokenResponse) ProtoMessage() {}
 
 func (x *ValidateAccessTokenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_rpc_auth_proto_msgTypes[8]
+	mi := &file_auth_rpc_auth_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -458,7 +502,7 @@ func (x *ValidateAccessTokenResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateAccessTokenResponse.ProtoReflect.Descriptor instead.
 func (*ValidateAccessTokenResponse) Descriptor() ([]byte, []int) {
-	return file_auth_rpc_auth_proto_rawDescGZIP(), []int{8}
+	return file_auth_rpc_auth_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ValidateAccessTokenResponse) GetValid() bool {
@@ -514,19 +558,21 @@ const file_auth_rpc_auth_proto_rawDesc = "" +
 	"\n" +
 	"expires_in\x18\x03 \x01(\x03R\texpiresIn\"5\n" +
 	"\x0eRefreshRequest\x12#\n" +
-	"\rrefresh_token\x18\x01 \x01(\tR\frefreshToken\"?\n" +
+	"\rrefresh_token\x18\x01 \x01(\tR\frefreshToken\"2\n" +
+	"\rLogoutRequest\x12!\n" +
+	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\"?\n" +
 	"\x1aValidateAccessTokenRequest\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\"\x95\x01\n" +
 	"\x1bValidateAccessTokenResponse\x12\x14\n" +
 	"\x05valid\x18\x01 \x01(\bR\x05valid\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\x03R\x06userId\x12-\n" +
 	"\x12credential_version\x18\x03 \x01(\x03R\x11credentialVersion\x12\x18\n" +
-	"\asubject\x18\x04 \x01(\tR\asubject2\xed\x02\n" +
+	"\asubject\x18\x04 \x01(\tR\asubject2\xee\x02\n" +
 	"\x04Auth\x126\n" +
 	"\bSendCode\x12\x15.auth.SendCodeRequest\x1a\x13.auth.EmptyResponse\x126\n" +
 	"\bRegister\x12\x15.auth.RegisterRequest\x1a\x13.auth.EmptyResponse\x120\n" +
-	"\x05Login\x12\x12.auth.LoginRequest\x1a\x13.auth.LoginResponse\x121\n" +
-	"\x06Logout\x12\x12.auth.EmptyRequest\x1a\x13.auth.EmptyResponse\x124\n" +
+	"\x05Login\x12\x12.auth.LoginRequest\x1a\x13.auth.LoginResponse\x122\n" +
+	"\x06Logout\x12\x13.auth.LogoutRequest\x1a\x13.auth.EmptyResponse\x124\n" +
 	"\aRefresh\x12\x14.auth.RefreshRequest\x1a\x13.auth.LoginResponse\x12Z\n" +
 	"\x13ValidateAccessToken\x12 .auth.ValidateAccessTokenRequest\x1a!.auth.ValidateAccessTokenResponseB.Z,github.com/Neo-Nedio/Lime-server/auth/rpc/pbb\x06proto3"
 
@@ -542,7 +588,7 @@ func file_auth_rpc_auth_proto_rawDescGZIP() []byte {
 	return file_auth_rpc_auth_proto_rawDescData
 }
 
-var file_auth_rpc_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_auth_rpc_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_auth_rpc_auth_proto_goTypes = []any{
 	(*EmptyRequest)(nil),                // 0: auth.EmptyRequest
 	(*EmptyResponse)(nil),               // 1: auth.EmptyResponse
@@ -551,22 +597,23 @@ var file_auth_rpc_auth_proto_goTypes = []any{
 	(*LoginRequest)(nil),                // 4: auth.LoginRequest
 	(*LoginResponse)(nil),               // 5: auth.LoginResponse
 	(*RefreshRequest)(nil),              // 6: auth.RefreshRequest
-	(*ValidateAccessTokenRequest)(nil),  // 7: auth.ValidateAccessTokenRequest
-	(*ValidateAccessTokenResponse)(nil), // 8: auth.ValidateAccessTokenResponse
+	(*LogoutRequest)(nil),               // 7: auth.LogoutRequest
+	(*ValidateAccessTokenRequest)(nil),  // 8: auth.ValidateAccessTokenRequest
+	(*ValidateAccessTokenResponse)(nil), // 9: auth.ValidateAccessTokenResponse
 }
 var file_auth_rpc_auth_proto_depIdxs = []int32{
 	2, // 0: auth.Auth.SendCode:input_type -> auth.SendCodeRequest
 	3, // 1: auth.Auth.Register:input_type -> auth.RegisterRequest
 	4, // 2: auth.Auth.Login:input_type -> auth.LoginRequest
-	0, // 3: auth.Auth.Logout:input_type -> auth.EmptyRequest
+	7, // 3: auth.Auth.Logout:input_type -> auth.LogoutRequest
 	6, // 4: auth.Auth.Refresh:input_type -> auth.RefreshRequest
-	7, // 5: auth.Auth.ValidateAccessToken:input_type -> auth.ValidateAccessTokenRequest
+	8, // 5: auth.Auth.ValidateAccessToken:input_type -> auth.ValidateAccessTokenRequest
 	1, // 6: auth.Auth.SendCode:output_type -> auth.EmptyResponse
 	1, // 7: auth.Auth.Register:output_type -> auth.EmptyResponse
 	5, // 8: auth.Auth.Login:output_type -> auth.LoginResponse
 	1, // 9: auth.Auth.Logout:output_type -> auth.EmptyResponse
 	5, // 10: auth.Auth.Refresh:output_type -> auth.LoginResponse
-	8, // 11: auth.Auth.ValidateAccessToken:output_type -> auth.ValidateAccessTokenResponse
+	9, // 11: auth.Auth.ValidateAccessToken:output_type -> auth.ValidateAccessTokenResponse
 	6, // [6:12] is the sub-list for method output_type
 	0, // [0:6] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
@@ -585,7 +632,7 @@ func file_auth_rpc_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_auth_rpc_auth_proto_rawDesc), len(file_auth_rpc_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
