@@ -11,6 +11,7 @@ import (
 	"github.com/Neo-Nedio/Lime-server/auth/rpc/pb"
 
 	"github.com/Neo-Nedio/Lime-server/pkg/configcenter"
+	"github.com/Neo-Nedio/Lime-server/pkg/interceptor/rpcserver"
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/core/service"
 	"github.com/zeromicro/go-zero/zrpc"
@@ -37,6 +38,7 @@ func main() {
 			reflection.Register(grpcServer)
 		}
 	})
+	s.AddUnaryInterceptors(rpcserver.LogInterceptor)
 	defer s.Stop()
 
 	fmt.Printf("Starting rpc server at %s...\n", c.ListenOn)

@@ -3,7 +3,6 @@ package logic
 import (
 	"context"
 	"crypto/rand"
-	"errors"
 	"fmt"
 	"math/big"
 	"net"
@@ -20,6 +19,7 @@ import (
 	errorHelper "github.com/Neo-Nedio/Lime-server/pkg/error/helper"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/pkg/errors"
 	"github.com/zeromicro/go-zero/core/logx"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -41,38 +41,38 @@ func NewSendCodeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *SendCode
 
 func (l *SendCodeLogic) SendCode(in *pb.SendCodeRequest) (*pb.EmptyResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "请求不能为空")
+		return nil, errors.Wrapf(errorHelper.NewBadRequest("请求不能为空"), "发送验证码请求参数错误")
 	}
 
 	email := strings.ToLower(strings.TrimSpace(in.Email))
 	if err := sendCodeValidator.Struct(sendCodeValidation{Email: email}); err != nil {
-		return nil, status.Error(codes.InvalidArgument, "邮箱格式无效")
+		return nil, errors.Wrapf(errorHelper.NewBadRequest("邮箱格式无效"), "发送验证码参数校验失败")
 	}
 	if l.svcCtx == nil || l.svcCtx.Redis == nil {
-		return nil, errorHelper.InternalError(l.Logger, "认证依赖未配置", nil)
+		return nil, errorHelper.InternalError("认证依赖未配置", nil)
 	}
 
 	cooldownKey := contans.EmailCodeCooldownKey(email)
 	exists, err := l.svcCtx.Redis.ExistsCtx(l.ctx, cooldownKey)
 	if err != nil {
-		return nil, errorHelper.InternalError(l.Logger, "检查验证码发送频率失败", err)
+		return nil, errorHelper.InternalError("检查验证码发送频率失败", err)
 	}
 	if exists {
-		return nil, status.Error(codes.ResourceExhausted, "验证码发送过于频繁，请稍后再试")
+		return nil, errors.Wrapf(status.Error(codes.ResourceExhausted, "验证码发送过于频繁，请稍后再试"), "验证码发送频率超限")
 	}
 
 	code, err := generateSendCode()
 	if err != nil {
-		return nil, errorHelper.InternalError(l.Logger, "生成验证码失败", err)
+		return nil, errors.Wrapf(err, "生成验证码失败")
 	}
 	if err := l.svcCtx.Redis.SetexCtx(l.ctx, contans.EmailCodeKey(email), code, int(contans.VerificationCodeTTL/time.Second)); err != nil {
-		return nil, errorHelper.InternalError(l.Logger, "保存验证码失败", err)
+		return nil, errorHelper.InternalError("保存验证码失败", err)
 	}
 	if err := l.svcCtx.Redis.SetexCtx(l.ctx, cooldownKey, "1", int(contans.VerificationCooldownTTL/time.Second)); err != nil {
-		return nil, errorHelper.InternalError(l.Logger, "保存验证码冷却状态失败", err)
+		return nil, errorHelper.InternalError("保存验证码冷却状态失败", err)
 	}
 	if err := sendSendCodeEmail(l.ctx, l.svcCtx.Config, email, code); err != nil {
-		return nil, errorHelper.InternalError(l.Logger, "发送验证码邮件失败", err)
+		return nil, errors.Wrapf(err, "发送验证码邮件失败")
 	}
 
 	return &pb.EmptyResponse{Success: true}, nil
@@ -92,7 +92,7 @@ func generateSendCode() (string, error) {
 	for index := 0; index < contans.VerificationCodeLength; index++ {
 		digit, err := rand.Int(rand.Reader, limit)
 		if err != nil {
-			return "", err
+			return "", errorHelper.InternalError("生成验证码失败", err)
 		}
 		builder.WriteByte(contans.VerificationCodeDigits[digit.Int64()])
 	}
@@ -102,15 +102,18 @@ func generateSendCode() (string, error) {
 
 func sendSendCodeEmail(ctx context.Context, c config.Config, email, code string) error {
 	if err := ctx.Err(); err != nil {
-		return errors.New("邮件发送已取消")
+		return errorHelper.InternalError("邮件发送已取消", err)
 	}
 	if strings.TrimSpace(c.Mailer.Host) == "" || c.Mailer.Port <= 0 || strings.TrimSpace(c.Mailer.From) == "" {
-		return errors.New("SMTP 配置不完整")
+		return errorHelper.InternalError("邮件服务器配置不完整", nil)
 	}
 
 	recipient, err := mail.ParseAddress(email)
-	if err != nil || recipient.Address != email {
-		return errors.New("收件邮箱地址无效")
+	if err != nil {
+		return errorHelper.InternalError("解析收件邮箱地址失败", err)
+	}
+	if recipient.Address != email {
+		return errorHelper.InternalError("收件邮箱地址无效", nil)
 	}
 
 	address := net.JoinHostPort(strings.TrimSpace(c.Mailer.Host), strconv.Itoa(c.Mailer.Port))
@@ -124,7 +127,7 @@ func sendSendCodeEmail(ctx context.Context, c config.Config, email, code string)
 		auth = smtp.PlainAuth("", c.Mailer.Username, c.Mailer.Password, c.Mailer.Host)
 	}
 	if err := smtp.SendMail(address, auth, c.Mailer.From, []string{recipient.Address}, message); err != nil {
-		return errors.New("SMTP 邮件发送失败")
+		return errorHelper.InternalError("SMTP 邮件发送失败", err)
 	}
 
 	return nil

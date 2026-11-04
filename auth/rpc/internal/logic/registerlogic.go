@@ -6,7 +6,7 @@ import (
 	"crypto/subtle"
 	"database/sql"
 	"encoding/hex"
-	"errors"
+	stderrors "errors"
 	"math/big"
 	"strings"
 	"unicode"
@@ -18,6 +18,7 @@ import (
 	errorHelper "github.com/Neo-Nedio/Lime-server/pkg/error/helper"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/pkg/errors"
 	"github.com/zeromicro/go-zero/core/logx"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
@@ -49,7 +50,7 @@ func NewRegisterLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Register
 
 func (l *RegisterLogic) Register(in *pb.RegisterRequest) (*pb.EmptyResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "请求不能为空")
+		return nil, errors.Wrapf(errorHelper.NewBadRequest("请求不能为空"), "注册请求参数错误")
 	}
 
 	email := strings.ToLower(strings.TrimSpace(in.Email))
@@ -61,38 +62,38 @@ func (l *RegisterLogic) Register(in *pb.RegisterRequest) (*pb.EmptyResponse, err
 		Code:     code,
 		Phone:    phone,
 	}); err != nil {
-		return nil, status.Error(codes.InvalidArgument, registerValidationMessage(err))
+		return nil, errors.Wrapf(errorHelper.NewBadRequest(registerValidationMessage(err)), "注册参数校验失败")
 	}
 	if l.svcCtx == nil || l.svcCtx.Redis == nil || l.svcCtx.UserModel == nil {
-		return nil, errorHelper.InternalError(l.Logger, "认证依赖未配置", nil)
+		return nil, errorHelper.InternalError("认证依赖未配置", nil)
 	}
 
 	storedCode, err := l.svcCtx.Redis.GetCtx(l.ctx, contans.EmailCodeKey(email))
 	if err != nil {
-		return nil, errorHelper.InternalError(l.Logger, "读取验证码失败", err)
+		return nil, errorHelper.InternalError("读取验证码失败", err)
 	}
 	if storedCode == "" || subtle.ConstantTimeCompare([]byte(storedCode), []byte(code)) != 1 {
-		return nil, status.Error(codes.InvalidArgument, "验证码错误或已过期")
+		return nil, errors.Wrapf(errorHelper.NewBadRequest("验证码错误或已过期"), "注册验证码校验失败")
 	}
 	if _, err := l.svcCtx.Redis.DelCtx(l.ctx, contans.EmailCodeKey(email)); err != nil {
-		return nil, errorHelper.InternalError(l.Logger, "消费验证码失败", err)
+		return nil, errorHelper.InternalError("消费验证码失败", err)
 	}
 
 	existing, err := l.svcCtx.UserModel.FindOneByEmail(l.ctx, email)
 	switch {
 	case err == nil && existing != nil:
-		return nil, status.Error(codes.AlreadyExists, "邮箱已注册")
+		return nil, errors.Wrapf(status.Error(codes.AlreadyExists, "邮箱已注册"), "注册邮箱重复")
 	case err != nil && !registerNotFound(err):
-		return nil, errorHelper.InternalError(l.Logger, "查询邮箱唯一性失败", err)
+		return nil, errorHelper.InternalError("查询邮箱唯一性失败", err)
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(in.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, errorHelper.InternalError(l.Logger, "加密密码失败", err)
+		return nil, errorHelper.InternalError("加密密码失败", err)
 	}
 	nickname, handle, uid, err := generateRegisterProfile()
 	if err != nil {
-		return nil, errorHelper.InternalError(l.Logger, "生成用户身份信息失败", err)
+		return nil, errors.Wrapf(err, "生成用户身份信息失败")
 	}
 
 	user := &models.User{
@@ -108,9 +109,9 @@ func (l *RegisterLogic) Register(in *pb.RegisterRequest) (*pb.EmptyResponse, err
 	}
 	if _, err := l.svcCtx.UserModel.CreateAuthUser(l.ctx, user); err != nil {
 		if registerDuplicate(err) {
-			return nil, status.Error(codes.AlreadyExists, "用户信息已存在")
+			return nil, errors.Wrapf(status.Error(codes.AlreadyExists, "用户信息已存在"), "创建用户时发现重复信息")
 		}
-		return nil, errorHelper.InternalError(l.Logger, "创建用户失败", err)
+		return nil, errorHelper.InternalError("创建用户失败", err)
 	}
 
 	return &pb.EmptyResponse{Success: true}, nil
@@ -131,7 +132,7 @@ func newRegisterValidator() *validator.Validate {
 
 func registerValidationMessage(err error) string {
 	var validationErrors validator.ValidationErrors
-	if !errors.As(err, &validationErrors) || len(validationErrors) == 0 {
+	if !stderrors.As(err, &validationErrors) || len(validationErrors) == 0 {
 		return "注册参数无效"
 	}
 
@@ -152,15 +153,15 @@ func registerValidationMessage(err error) string {
 func generateRegisterProfile() (string, string, string, error) {
 	nicknameSuffix, err := generateRegisterDigits(contans.VerificationCodeLength)
 	if err != nil {
-		return "", "", "", err
+		return "", "", "", errorHelper.InternalError("生成用户昵称失败", err)
 	}
 	handleSuffix, err := generateRegisterHex(8)
 	if err != nil {
-		return "", "", "", err
+		return "", "", "", errorHelper.InternalError("生成用户标识失败", err)
 	}
 	uidSuffix, err := generateRegisterHex(32)
 	if err != nil {
-		return "", "", "", err
+		return "", "", "", errorHelper.InternalError("生成用户唯一标识失败", err)
 	}
 	return "用户" + nicknameSuffix, "user_" + handleSuffix, "uid_" + uidSuffix, nil
 }
@@ -172,7 +173,7 @@ func generateRegisterDigits(length int) (string, error) {
 	for index := 0; index < length; index++ {
 		digit, err := rand.Int(rand.Reader, limit)
 		if err != nil {
-			return "", err
+			return "", errorHelper.InternalError("生成随机数字失败", err)
 		}
 		builder.WriteByte(contans.VerificationCodeDigits[digit.Int64()])
 	}
@@ -181,11 +182,11 @@ func generateRegisterDigits(length int) (string, error) {
 
 func generateRegisterHex(length int) (string, error) {
 	if length <= 0 {
-		return "", errors.New("随机字符串长度必须大于零")
+		return "", errorHelper.InternalError("随机字符串长度必须大于零", nil)
 	}
 	bytes := make([]byte, (length+1)/2)
 	if _, err := rand.Read(bytes); err != nil {
-		return "", err
+		return "", errorHelper.InternalError("生成随机字符串失败", err)
 	}
 	return hex.EncodeToString(bytes)[:length], nil
 }
@@ -195,7 +196,7 @@ func registerNullableString(value string) sql.NullString {
 }
 
 func registerNotFound(err error) bool {
-	return errors.Is(err, models.ErrNotFound)
+	return stderrors.Is(err, models.ErrNotFound)
 }
 
 func registerDuplicate(err error) bool {

@@ -5,6 +5,7 @@ go 1.27.2
 require (
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/go-playground/validator/v10 v10.27.0
+	github.com/pkg/errors v0.9.1
 	github.com/zeromicro/go-zero v1.10.3
 	golang.org/x/crypto v0.48.0
 	google.golang.org/grpc v1.80.0
@@ -56,7 +57,6 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/openzipkin/zipkin-go v0.4.3 // indirect
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.23.2 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect

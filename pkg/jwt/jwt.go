@@ -2,13 +2,12 @@
 package jwt
 
 import (
-	"errors"
-	"fmt"
 	"strings"
 	"time"
 
 	"github.com/Neo-Nedio/Lime-server/pkg/contans"
 	jwtv4 "github.com/golang-jwt/jwt/v4"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -83,10 +82,10 @@ func WithClock(now func() time.Time) Option {
 // NewTokenManager 创建 JWT 工具实例。
 func NewTokenManager(accessSecret, refreshSecret string, accessExpire, refreshExpire int64, options ...Option) (*TokenManager, error) {
 	if strings.TrimSpace(accessSecret) == "" || strings.TrimSpace(refreshSecret) == "" {
-		return nil, fmt.Errorf("%w：访问令牌和刷新令牌的密钥不能为空", ErrInvalidTokenConfig)
+		return nil, errors.Wrapf(ErrInvalidTokenConfig, "访问令牌和刷新令牌的密钥不能为空")
 	}
 	if accessExpire <= 0 || refreshExpire <= 0 {
-		return nil, fmt.Errorf("%w：访问令牌和刷新令牌的有效期必须大于零", ErrInvalidTokenConfig)
+		return nil, errors.Wrapf(ErrInvalidTokenConfig, "访问令牌和刷新令牌的有效期必须大于零")
 	}
 
 	manager := &TokenManager{
@@ -119,12 +118,12 @@ func (m *TokenManager) IssueRefreshToken(user UserClaims) (string, error) {
 func (m *TokenManager) IssueTokenPair(user UserClaims) (TokenPair, error) {
 	accessToken, err := m.IssueAccessToken(user)
 	if err != nil {
-		return TokenPair{}, err
+		return TokenPair{}, errors.Wrapf(err, "签发访问令牌失败")
 	}
 
 	refreshToken, err := m.IssueRefreshToken(user)
 	if err != nil {
-		return TokenPair{}, err
+		return TokenPair{}, errors.Wrapf(err, "签发刷新令牌失败")
 	}
 
 	return TokenPair{
@@ -147,7 +146,7 @@ func (m *TokenManager) ParseRefreshToken(rawToken string) (*Claims, error) {
 func (m *TokenManager) issue(user UserClaims, tokenType string, ttl time.Duration, secret []byte) (string, error) {
 	user = normalizeUserClaims(user)
 	if user.UserID <= 0 || user.Subject == "" || user.CredentialVersion < 0 {
-		return "", fmt.Errorf("%w：用户 ID、主题和凭证版本无效", ErrInvalidTokenClaims)
+		return "", errors.Wrapf(ErrInvalidTokenClaims, "用户 ID、主题和凭证版本无效")
 	}
 
 	now := m.now().UTC()
@@ -169,7 +168,7 @@ func (m *TokenManager) issue(user UserClaims, tokenType string, ttl time.Duratio
 	token := jwtv4.NewWithClaims(jwtv4.SigningMethodHS256, claims)
 	signed, err := token.SignedString(secret)
 	if err != nil {
-		return "", fmt.Errorf("%w（类型：%s）", ErrTokenSigning, tokenType)
+		return "", errors.Wrapf(ErrTokenSigning, "签发 %s 令牌失败", tokenType)
 	}
 
 	return signed, nil
@@ -177,28 +176,28 @@ func (m *TokenManager) issue(user UserClaims, tokenType string, ttl time.Duratio
 
 func (m *TokenManager) parse(rawToken, expectedTokenType string, secret []byte) (*Claims, error) {
 	if strings.TrimSpace(rawToken) == "" {
-		return nil, ErrInvalidToken
+		return nil, errors.Wrapf(ErrInvalidToken, "令牌不能为空")
 	}
 
 	token, err := jwtv4.ParseWithClaims(rawToken, &Claims{}, func(token *jwtv4.Token) (interface{}, error) {
 		if token.Method == nil || token.Method.Alg() != jwtv4.SigningMethodHS256.Alg() {
-			return nil, ErrUnexpectedSigningMethod
+			return nil, errors.Wrapf(ErrUnexpectedSigningMethod, "JWT 签名算法不受支持")
 		}
 		return secret, nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("%w：签名、格式或有效期校验失败", ErrInvalidToken)
+		return nil, errors.Wrapf(ErrInvalidToken, "签名、格式或有效期校验失败")
 	}
 	if !token.Valid {
-		return nil, ErrInvalidToken
+		return nil, errors.Wrapf(ErrInvalidToken, "JWT 校验未通过")
 	}
 
 	claims, ok := token.Claims.(*Claims)
 	if !ok || claims.UserID <= 0 || claims.CredentialVersion < 0 || strings.TrimSpace(claims.Subject) == "" {
-		return nil, ErrInvalidTokenClaims
+		return nil, errors.Wrapf(ErrInvalidTokenClaims, "JWT 用户身份信息不完整")
 	}
 	if claims.TokenType != expectedTokenType {
-		return nil, ErrTokenTypeMismatch
+		return nil, errors.Wrapf(ErrTokenTypeMismatch, "JWT 类型与当前校验入口不一致")
 	}
 
 	return claims, nil

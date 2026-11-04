@@ -5,9 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Neo-Nedio/Lime-server/pkg/error/code"
-	"github.com/zeromicro/go-zero/core/logx"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"github.com/pkg/errors"
 )
 
 // Error 是 API 返回的通用错误对象。
@@ -63,10 +61,11 @@ func NewInternalServerError(message string) *Error {
 	return New(code.InternalServerError, message)
 }
 
-// InternalError 记录内部错误，并向调用方返回统一的系统错误。
-func InternalError(logger logx.Logger, message string, cause error) error {
-	if logger != nil && cause != nil {
-		logger.Errorf("%s：%v", message, cause)
+// InternalError 包装内部错误，详细信息交给 RPC 拦截器记录。
+func InternalError(message string, cause error) error {
+	internalError := NewInternalServerError("系统繁忙，请稍后再试")
+	if cause == nil {
+		return errors.Wrapf(internalError, "%s", message)
 	}
-	return status.Error(codes.Internal, "系统繁忙，请稍后再试")
+	return errors.Wrapf(internalError, "%s：%v", message, cause)
 }
