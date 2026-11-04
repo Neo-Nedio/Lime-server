@@ -1,0 +1,56 @@
+syntax = "v1"
+
+type (
+	SendCodeReq {
+		Email string `json:"email"`
+	}
+	RegisterReq {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+		Code     string `json:"code"`
+		Phone    string `json:"phone,optional"`
+	}
+	LoginReq {
+		Email    string `json:"email"`
+		Password string `json:"password,optional"`
+		Code     string `json:"code,optional"`
+	}
+	RefreshReq {
+		RefreshToken string `json:"refreshToken"`
+	}
+	EmptyDataResp {
+		Data interface{} `json:"data"`
+	}
+	LoginResp {
+		AccessToken  string `json:"accessToken"`
+		RefreshToken string `json:"refreshToken"`
+		ExpiresIn    int64  `json:"expiresIn"`
+	}
+)
+
+@server (
+	prefix: /api/auth
+)
+service auth-api {
+	@handler SendCode
+	post /send-code (SendCodeReq) returns (EmptyDataResp)
+
+	@handler Register
+	post /register (RegisterReq) returns (EmptyDataResp)
+
+	@handler Login
+	post /login (LoginReq) returns (LoginResp)
+
+	@handler Refresh
+	post /refresh (RefreshReq) returns (LoginResp)
+}
+
+@server (
+	prefix: /api/auth
+	jwt:    JWT
+)
+service auth-api {
+	@handler Logout
+	post /logout returns (EmptyDataResp)
+}
+

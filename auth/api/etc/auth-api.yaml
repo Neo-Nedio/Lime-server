@@ -1,0 +1,26 @@
+# 本地启动默认值；etcd 返回配置后覆盖同名字段。
+Name: auth
+Host: 0.0.0.0
+Port: 8888
+
+ConfigCenter:
+  Etcd:
+    Hosts: [127.0.0.1:2379]
+    Key: lime/config/auth-api
+
+# auth API 运行配置模板：由 etcd 按需返回，用于覆盖本地默认值。
+#
+# Name: auth
+# Host: 0.0.0.0
+# Port: 8888
+#
+# AuthRpc:
+#   Etcd:
+#     Hosts:
+#       - 127.0.0.1:2379
+#     Key: lime/auth.rpc
+#
+# logout 的 JWT 中间件只需要以下字段：
+# JWT:
+#   AccessSecret: REPLACE_JWT_ACCESS_SECRET
+#   AccessExpire: 900 # 秒

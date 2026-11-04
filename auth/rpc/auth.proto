@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "github.com/Neo-Nedio/Lime-server/auth/rpc/pb";
+
+message EmptyRequest {}
+
+message EmptyResponse {
+  bool success = 1;
+}
+
+message SendCodeRequest {
+  string email = 1;
+}
+
+message RegisterRequest {
+  string email = 1;
+  string password = 2;
+  string code = 3;
+  string phone = 4;
+}
+
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+  string code = 3;
+}
+
+message LoginResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  int64 expires_in = 3;
+}
+
+message RefreshRequest {
+  string refresh_token = 1;
+}
+
+message ValidateAccessTokenRequest {
+  string access_token = 1;
+}
+
+message ValidateAccessTokenResponse {
+  bool valid = 1;
+  int64 user_id = 2;
+  int64 credential_version = 3;
+  string subject = 4;
+}
+
+service Auth {
+  rpc SendCode(SendCodeRequest) returns (EmptyResponse);
+  rpc Register(RegisterRequest) returns (EmptyResponse);
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc Logout(EmptyRequest) returns (EmptyResponse);
+  rpc Refresh(RefreshRequest) returns (LoginResponse);
+  rpc ValidateAccessToken(ValidateAccessTokenRequest) returns (ValidateAccessTokenResponse);
+}

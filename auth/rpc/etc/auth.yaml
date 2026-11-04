@@ -1,0 +1,39 @@
+Name: auth
+ListenOn: 0.0.0.0:8080
+ConfigCenter:
+  Etcd:
+    Hosts: [127.0.0.1:2379]
+    Key: lime/config/auth-rpc
+
+# auth RPC 运行配置模板：由 etcd 按需返回，用于覆盖本地默认值。
+#
+# Name: auth
+# ListenOn: 0.0.0.0:8080
+#
+# Etcd:
+#   Hosts:
+#   - 127.0.0.1:2379
+#   Key: lime/auth.rpc
+#
+# PostgreSQL:
+#   DSN: postgres://REPLACE_USER:REPLACE_PASSWORD@127.0.0.1:5432/lime?sslmode=disable
+#   MaxOpenConns: 10
+#   MaxIdleConns: 5
+#
+# Redis:
+#   Address: 127.0.0.1:6379
+#   Password: REPLACE_REDIS_PASSWORD
+#   DB: 0
+#
+# Mailer:
+#   Host: smtp.example.invalid
+#   Port: 587
+#   Username: REPLACE_SMTP_USERNAME
+#   Password: REPLACE_SMTP_PASSWORD
+#   From: no-reply@example.invalid
+#
+# JWT:
+#   AccessSecret: REPLACE_JWT_ACCESS_SECRET
+#   RefreshSecret: REPLACE_JWT_REFRESH_SECRET
+#   AccessTTL: 15m
+#   RefreshTTL: 720h
