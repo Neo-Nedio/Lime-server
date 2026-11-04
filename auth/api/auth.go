@@ -6,11 +6,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 
 	"github.com/Neo-Nedio/Lime-server/auth/api/internal/config"
 	"github.com/Neo-Nedio/Lime-server/auth/api/internal/handler"
 	"github.com/Neo-Nedio/Lime-server/auth/api/internal/svc"
 
+	"github.com/Neo-Nedio/Lime-server/pkg/configcenter"
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/rest"
 )
@@ -22,6 +24,9 @@ func main() {
 
 	var c config.Config
 	conf.MustLoad(*configFile, &c)
+	if err := configcenter.Load(&c); err != nil {
+		log.Fatalf("加载远程配置失败: %v", err)
+	}
 
 	server := rest.MustNewServer(c.RestConf)
 	defer server.Stop()

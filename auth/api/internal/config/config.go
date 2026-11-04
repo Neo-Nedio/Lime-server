@@ -3,11 +3,15 @@
 
 package config
 
-import "github.com/zeromicro/go-zero/rest"
+import (
+	"github.com/Neo-Nedio/Lime-server/pkg/configcenter"
+	"github.com/zeromicro/go-zero/rest"
+)
 
 type Config struct {
 	rest.RestConf
-	JWT struct {
+	ConfigCenter configcenter.ConfigCenter
+	JWT          struct {
 		AccessSecret string
 		AccessExpire int64
 	}
